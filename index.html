@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historical Crisis Audio Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Circular+Std:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-black: #000000;
+      --bg-base: #121212;
+      --bg-card: #181818;
+      --bg-card-hover: #282828;
+      --text-base: #ffffff;
+      --text-sub: #b3b3b3;
+      --accent-green: #1db954;
+      --accent-green-hover: #1ed760;
+      --progress-bg: #4f4f4f;
+      --border-color: #282828;
+      --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-black);
+      color: var(--text-base);
+      font-family: var(--font-main);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* Top Main Layout */
+    .app-container {
+      display: grid;
+      grid-template-columns: 280px 1fr 340px;
+      flex: 1;
+      height: calc(100vh - 90px);
+      padding: 8px;
+      gap: 8px;
+      background-color: var(--bg-black);
+    }
+
+    .app-container.lyrics-collapsed {
+      grid-template-columns: 280px 1fr 0px;
+    }
+
+    /* Common Card Panel Style */
+    .panel {
+      background-color: var(--bg-base);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Left Sidebar */
+    .sidebar {
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-base);
+      font-weight: 700;
+      font-size: 1.15rem;
+      padding-left: 6px;
+    }
+
+    .brand svg {
+      fill: var(--accent-green);
+    }
+
+    .nav-stats {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      line-height: 1.5;
+    }
+
+    .nav-stats strong {
+      color: var(--text-base);
+    }
+
+    .search-box {
+      position: relative;
+      margin-top: 5px;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: #242424;
+      border: 1px solid transparent;
+      border-radius: 20px;
+      padding: 10px 14px 10px 36px;
+      color: var(--text-base);
+      font-size: 0.85rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .search-box input:focus {
+      border-color: #555;
+      background: #2a2a2a;
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      fill: var(--text-sub);
+    }
+
+    /* Center Content (Tracklist) */
+    .main-view {
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .playlist-header {
+      padding: 32px 24px 20px 24px;
+      background: linear-gradient(180deg, #3d2314 0%, var(--bg-base) 100%);
+      display: flex;
+      align-items: flex-end;
+      gap: 24px;
+    }
+
+    .playlist-art {
+      width: 160px;
+      height: 160px;
+      background: linear-gradient(135deg, #450af5, #c4efd9);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      flex-shrink: 0;
+    }
+
+    .playlist-details h4 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-base);
+      margin-bottom: 6px;
+    }
+
+    .playlist-details h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      line-height: 1.1;
+    }
+
+    .playlist-details p {
+      color: var(--text-sub);
+      font-size: 0.85rem;
+    }
+
+    /* Table styles */
+    .track-table-header {
+      display: grid;
+      grid-template-columns: 48px 1fr 140px 80px;
+      padding: 8px 24px;
+      color: var(--text-sub);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 8px;
+    }
+
+    .track-list {
+      display: flex;
+      flex-direction: column;
+      padding: 0 16px 24px 16px;
+    }
+
+    .track-item {
+      display: grid;
+      grid-template-columns: 48px 1fr 140px 80px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      align-items: center;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .track-item:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    .track-item.active {
+      background-color: #2a2a2a;
+    }
+
+    .track-item.active .track-title {
+      color: var(--accent-green);
+    }
+
+    .track-num {
+      color: var(--text-sub);
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      align-items: center;
+    }
+
+    .track-title-wrap {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-right: 12px;
+    }
+
+    .track-title {
+      color: var(--text-base);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-location {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      margin-top: 3px;
+    }
+
+    .track-year {
+      color: var(--text-sub);
+      font-size: 0.85rem;
+    }
+
+    .track-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-read-script {
+      background: transparent;
+      border: 1px solid #555;
+      color: var(--text-sub);
+      border-radius: 12px;
+      padding: 3px 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-read-script:hover {
+      border-color: var(--text-base);
+      color: var(--text-base);
+      transform: scale(1.05);
+    }
+
+    /* Right Sidebar (Script / Transcript Panel) */
+    .script-panel {
+      border-left: 1px solid #000;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-base);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .app-container.lyrics-collapsed .script-panel {
+      display: none;
+    }
+
+    .script-header {
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .script-header h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-base);
+    }
+
+    .close-script-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-sub);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 4px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s ease;
+    }
+
+    .close-script-btn:hover {
+      color: var(--text-base);
+    }
+
+    .script-content {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: #e0e0e0;
+      letter-spacing: 0.2px;
+      white-space: pre-line;
+      user-select: text;
+    }
+
+    .script-title-display {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--accent-green);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    /* Bottom Player Bar */
+    .player-bar {
+      height: 90px;
+      background-color: var(--bg-black);
+      border-top: 1px solid var(--border-color);
+      display: grid;
+      grid-template-columns: 320px 1fr 320px;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 100;
+    }
+
+    /* Current Playing Info */
+    .now-playing {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .now-playing-thumb {
+      width: 56px;
+      height: 56px;
+      background: #282828;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.4rem;
+    }
+
+    .now-playing-meta {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .now-playing-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-base);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .now-playing-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 3px;
+    }
+
+    /* Center Controls */
+    .player-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-buttons {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .ctrl-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-sub);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s ease, transform 0.15s ease;
+    }
+
+    .ctrl-btn:hover {
+      color: var(--text-base);
+    }
+
+    .play-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--text-base);
+      color: var(--bg-black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+
+    .play-circle:hover {
+      transform: scale(1.06);
+      background-color: var(--accent-green-hover);
+    }
+
+    .playback-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      max-width: 580px;
+    }
+
+    .time-stamp {
+      font-size: 0.7rem;
+      color: var(--text-sub);
+      width: 40px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress-slider {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--progress-bg);
+      appearance: none;
+      outline: none;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .progress-slider::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      display: none;
+      cursor: pointer;
+    }
+
+    .progress-slider:hover::-webkit-slider-thumb {
+      display: block;
+    }
+
+    /* Right Tools / Volume */
+    .player-tools {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 16px;
+    }
+
+    .btn-toggle-lyrics {
+      background: transparent;
+      border: none;
+      color: var(--text-sub);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-toggle-lyrics:hover {
+      color: var(--text-base);
+    }
+
+    .btn-toggle-lyrics.active-tab {
+      color: var(--accent-green);
+    }
+
+    .vol-slider {
+      width: 86px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--progress-bg);
+      appearance: none;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 5px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.35);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container" id="appContainer">
+    <!-- Left Navigation / Search Panel -->
+    <div class="panel sidebar">
+      <div class="brand">
+        <svg height="28" width="28" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M7 9.5c3.5-1 7.5-.7 10.5 1M8 12.5c3-.8 6.5-.5 9 1M8.5 15.5c2.3-.6 5-.4 7 .7" stroke="#000" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        </svg>
+        <span>AudioLibrary</span>
+      </div>
+
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24">
+          <path d="M10 2a8 8 0 015.29 14l5.36 5.35-1.42 1.42-5.35-5.36A8 8 0 1110 2zm0 2a6 6 0 100 12 6 6 0 000-12z"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Search track or location..." autocomplete="off">
+      </div>
+
+      <div class="nav-stats">
+        <strong>English Listening Lab</strong><br>
+        21 Historical Incident Narratives.<br>
+        Listen, toggle transcripts, and practice reading alongside authentic spoken audio.
+      </div>
+    </div>
+
+    <!-- Center Playlists View -->
+    <div class="panel main-view" id="mainScrollable">
+      <div class="playlist-header">
+        <div class="playlist-art">🎙️</div>
+        <div class="playlist-details">
+          <h4>Collection</h4>
+          <h1>Historical Crisis & Rescue Missions</h1>
+          <p>Carefully timed ESL listening scripts & historical archives &bull; 21 Lessons</p>
+        </div>
+      </div>
+
+      <div class="track-table-header">
+        <div>#</div>
+        <div>Title</div>
+        <div>Year</div>
+        <div style="text-align: right;">Script</div>
+      </div>
+
+      <div class="track-list" id="trackListContainer"></div>
+    </div>
+
+    <!-- Right Side Transcript / Script Panel -->
+    <div class="panel script-panel" id="scriptPanel">
+      <div class="script-header">
+        <h3>Transcript & Script</h3>
+        <button class="close-script-btn" id="closeScriptBtn" title="Close transcript panel">&times;</button>
+      </div>
+      <div class="script-content" id="scriptBody">
+        <div class="script-title-display" id="scriptTitle">Select a track to read</div>
+        <div id="scriptText">Choose any crisis from the playlist to display its pedagogical transcript here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Player Controller -->
+  <div class="player-bar">
+    <!-- Current Playing Media Meta -->
+    <div class="now-playing">
+      <div class="now-playing-thumb" id="miniThumb">📻</div>
+      <div class="now-playing-meta">
+        <span class="now-playing-title" id="barTrackTitle">Select track</span>
+        <span class="now-playing-subtitle" id="barTrackLocation">ESL Historical Archive</span>
+      </div>
+    </div>
+
+    <!-- Center Controls -->
+    <div class="player-controls">
+      <div class="control-buttons">
+        <button class="ctrl-btn" id="prevBtn" title="Previous Track">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+        <button class="play-circle" id="masterPlayBtn" title="Play/Pause">
+          <svg id="playIconSvg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+        </button>
+        <button class="ctrl-btn" id="nextBtn" title="Next Track">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        </button>
+      </div>
+
+      <div class="playback-bar">
+        <span class="time-stamp" id="currTime">0:00</span>
+        <input type="range" class="progress-slider" id="timeline" value="0" min="0" max="100" step="0.1">
+        <span class="time-stamp" id="totalDuration">0:00</span>
+      </div>
+    </div>
+
+    <!-- Right Controls: Lyrics toggle & Volume slider -->
+    <div class="player-tools">
+      <button class="btn-toggle-lyrics active-tab" id="lyricsToggleBtn" title="Toggle Script Panel">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        </svg>
+      </button>
+
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--text-sub)">
+        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+      </svg>
+      <input type="range" class="vol-slider" id="volSlider" value="100" min="0" max="100">
+    </div>
+  </div>
+
+  <audio id="audioEngine" preload="metadata"></audio>
+
+  <script>
+    const database = [
+      {
+        id: 1,
+        title: "TWA Flight 840 Hijacking",
+        location: "Damascus, Syria",
+        year: "1969",
+        filename: "TWA Flight 840 Hijacking – Damascus, Syria (1969) .m4a",
+        script: `In August nineteen sixty-nine, a passenger airplane called TWA Flight eight four zero was flying toward Athens. Suddenly, two members of a Palestinian group used weapons to take complete control of the large aircraft. They quickly forced the pilot to change direction and fly to Damascus, the capital city of Syria. The attackers wanted to bring global attention to their political cause by holding the airplane and passengers. When the plane safely landed in Syria, the hijackers made everyone leave the airplane as fast as possible. After all passengers and crew were outside, the hijackers used explosives to blow up the front part of the plane. Fortunately, no one was killed or seriously injured during this extremely frightening and dangerous political hostage situation at all. Most of the terrified passengers were eventually allowed to travel back to their own homes very quickly afterward. However, the Syrian government decided to hold two passengers from Israel as prisoners for several difficult months there. Finally, those two captives were safely returned to their families, ending this historically important and very famous hijacking. This frightening event changed history forever. It showed the world how passenger airplanes could be used as tools for political attacks in the future.`
+      },
+      {
+        id: 2,
+        title: "Munich Olympics Massacre",
+        location: "Munich, West Germany",
+        year: "1972",
+        filename: "Munich Olympics Massacre – Munich, West Germany (1972) .m4a",
+        script: `In September nineteen seventy-two, a terrible tragedy happened during the very famous Summer Olympic Games in Munich. Suddenly, eight members of a Palestinian group used weapons to sneak into the peaceful Olympic sports village. They quickly attacked the building where the athletes from Israel were staying and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the innocent athletes hostage. When the local police arrived at the village, the hijackers made everyone wait during long and scary talks. After many hours of waiting inside, the hijackers moved the hostages to a nearby airport to escape on a plane. Unfortunately, the German police tried to rescue them, but this extremely frightening and dangerous rescue mission failed very badly. Most of the terrified athletes were sadly killed during the big gun battle at the dark airport runway. However, the German authorities decided to arrest three surviving attackers as prisoners for several difficult months right there. Finally, those three captives were later released, ending this historically important and very famous sad Olympic sports tragedy. This frightening event changed history forever. It showed the world how international sports events could be used as targets for terrible political attacks today.`
+      },
+      {
+        id: 3,
+        title: "Operation Isotope (Sabena Flight 571)",
+        location: "Tel Aviv, Israel",
+        year: "1972",
+        filename: "Operation Isotope (Sabena Flight 571) – Tel Aviv, Israel (1972).m4a",
+        script: `In May nineteen seventy-two, a passenger airplane called Sabena Flight five seven one was flying toward Israel. Suddenly, four members of a Palestinian group used weapons to take complete control of the large aircraft. They quickly forced the pilot to change direction and fly to Tel Aviv, a busy Israeli city. The attackers wanted to bring global attention to their political cause by holding the airplane and passengers. When the plane safely landed in Israel, the hijackers made everyone wait during long and scary negotiations. After many hours of waiting inside, the hijackers threatened to use explosives to blow up the plane completely everywhere. Fortunately, the Israeli army planned to rescue them, and this extremely brave and dangerous military rescue mission succeeded perfectly. Most of the terrified passengers were eventually allowed to travel back to their own homes very quickly afterward. However, the Israeli government decided to hold two surviving attackers as prisoners for several difficult months right there. Finally, those two captives were safely locked away, ending this historically important and very famous successful airplane rescue. This amazing event changed history forever. It showed the world how special military forces could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 4,
+        title: "OPEC Siege",
+        location: "Vienna, Austria",
+        year: "1975",
+        filename: "OPEC Siege – Vienna, Austria (1975)..mp3",
+        script: `In December nineteen seventy-five, a terrible attack happened during a very important oil meeting in Vienna, Austria. Suddenly, six members of a dangerous group used weapons to take complete control of the large building. They quickly attacked the leaders who were managing the world oil supply and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the important leaders hostage. When the local police arrived at the building, the hijackers made everyone wait during long and scary talks. After many hours of waiting inside, the hijackers moved the hostages to a nearby airport to escape on a plane. Unfortunately, the Austrian police tried to stop them, but this extremely frightening and dangerous police mission failed very badly. Most of the terrified leaders were eventually allowed to travel back to their own homes very quickly afterward. However, the dangerous attackers decided to take some important people as prisoners for several difficult days right there. Finally, those taken captives were safely returned home, ending this historically important and very famous sad hostage situation. This frightening event changed history forever. It showed the world how international business meetings could be used as targets for terrible political attacks today.`
+      },
+      {
+        id: 5,
+        title: "Balcombe Street Siege",
+        location: "London, United Kingdom",
+        year: "1975",
+        filename: "Balcombe Street Siege – London, United Kingdom (1975).m4a",
+        script: `In December nineteen seventy-five, a frightening standoff happened during a very dark winter evening in London, England. Suddenly, four members of a dangerous group used weapons to take complete control of a small apartment. They quickly attacked the couple who were living in the quiet home and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the innocent couple hostage. When the local police arrived at the apartment, the gunmen made everyone wait during long and scary talks. After many days of waiting inside, the attackers threatened to use explosives to blow up the house completely everywhere. Fortunately, the British police planned to capture them, and this extremely brave and dangerous police mission succeeded almost perfectly. Both of the terrified hostages were eventually allowed to travel back to their own lives very quickly afterward. However, the British government decided to hold the four attackers as prisoners for several difficult decades right there. Finally, those four captives were safely locked away, ending this historically important and very famous successful police rescue. This amazing event changed history forever. It showed the world how special police forces could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 6,
+        title: "Loyada School Bus Rescue",
+        location: "Loyada, Djibouti",
+        year: "1976",
+        filename: "Loyada School Bus Rescue – Loyada, Djibouti (1976).m4a",
+        script: `In February nineteen seventy-six, a terrible tragedy happened during a very normal school day in Loyada, Djibouti. Suddenly, several members of a dangerous group used weapons to take complete control of a large bus. They quickly attacked the vehicle where the children from France were sitting and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the innocent children hostage. When the local soldiers arrived at the border, the hijackers made everyone wait during long and scary talks. After many hours of waiting inside, the hijackers threatened to use weapons to hurt the young children completely everywhere. Fortunately, the French army planned to rescue them, and this extremely brave and dangerous military rescue mission succeeded perfectly. Most of the terrified children were eventually allowed to travel back to their own homes very quickly afterward. However, the French soldiers decided to shoot the dangerous attackers during the difficult and very loud gun battle. Finally, those young captives were safely returned home, ending this historically important and very famous successful military rescue. This amazing event changed history forever. It showed the world how special military forces could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 7,
+        title: "Operation Entebbe (Air France Flight 139)",
+        location: "Entebbe, Uganda",
+        year: "1976",
+        filename: "Operation Entebbe (Air France Flight 139) – Entebbe, Uganda (1976).m4a",
+        script: `In July nineteen seventy-six, a passenger airplane called Air France Flight one three nine was flying toward Paris. Suddenly, four members of a dangerous group used weapons to take complete control of the large aircraft. They quickly forced the pilot to change direction and fly to Entebbe, a city in African Uganda. The attackers wanted to bring global attention to their political cause by holding the airplane and passengers. When the plane safely landed in Uganda, the hijackers made everyone wait during long and scary armed talks. After many days of waiting inside, the hijackers threatened to use explosives to blow up the hostages completely everywhere. Fortunately, the Israeli army planned to rescue them, and this extremely brave and dangerous military rescue mission succeeded perfectly. Most of the terrified passengers were eventually allowed to travel back to their own homes very quickly afterward. However, the Israeli soldiers decided to shoot the dangerous attackers and enemy soldiers during the difficult rescue mission. Finally, those rescued captives were safely brought home, ending this historically important and very famous successful airplane rescue. This amazing event changed history forever. It showed the world how special military forces could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 8,
+        title: "Hanafi Siege",
+        location: "Washington, D.C., USA",
+        year: "1977",
+        filename: "Hanafi Siege – Washington, D.C., United States (1977).mp3",
+        script: `In March nineteen seventy-seven, a terrible tragedy happened during a very normal working day in Washington, America. Suddenly, twelve members of a dangerous group used weapons to take complete control of three large buildings. They quickly attacked the places where the workers from America were staying and took them as prisoners. The attackers wanted to bring global attention to their religious cause by holding the innocent workers hostage. When the local police arrived at the buildings, the hijackers made everyone wait during long and scary talks. After many hours of waiting inside, the hijackers threatened to use weapons to hurt the scared hostages completely everywhere. Fortunately, the American police planned to rescue them, and this extremely brave and dangerous diplomatic rescue mission succeeded perfectly. Most of the terrified workers were eventually allowed to travel back to their own homes very quickly afterward. However, the American government decided to hold the twelve attackers as prisoners for several difficult decades right there. Finally, those innocent captives were safely returned home, ending this historically important and very famous successful police rescue. This amazing event changed history forever. It showed the world how special police forces could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 9,
+        title: "De Punt Train Hijacking",
+        location: "Drenthe, Netherlands",
+        year: "1977",
+        filename: "De Punt Train Hijacking – Drenthe, Netherlands (1977).m4a",
+        script: `In May nineteen seventy-seven, a terrible tragedy happened during a very normal travel day in Drenthe, Netherlands. Suddenly, nine members of a dangerous group used weapons to take complete control of a large train. They quickly attacked the vehicle where the passengers from Holland were sitting and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the innocent travelers hostage. When the local soldiers arrived at the railway, the hijackers made everyone wait during long and scary talks. After many days of waiting inside, the hijackers threatened to use weapons to hurt the young passengers completely everywhere. Fortunately, the Dutch army planned to rescue them, and this extremely brave and dangerous military rescue mission succeeded perfectly. Most of the terrified passengers were eventually allowed to travel back to their own homes very quickly afterward. However, the Dutch soldiers decided to shoot six dangerous attackers during the difficult and very loud gun battle. Finally, those rescued captives were safely returned home, ending this historically important and very famous successful military rescue. This amazing event changed history forever. It showed the world how special military forces could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 10,
+        title: "Operation Feuerzauber (Lufthansa 181)",
+        location: "Mogadishu, Somalia",
+        year: "1977",
+        filename: "Operation Feuerzauber (Lufthansa Flight 181) – Mogadishu, Somalia (1977).m4a",
+        script: `In October nineteen seventy-seven, a passenger airplane called Lufthansa Flight one eight one was flying toward Germany. Suddenly, four members of a dangerous group used weapons to take complete control of the large aircraft. They quickly forced the pilot to change direction and fly to Mogadishu, a city in African Somalia. The attackers wanted to bring global attention to their political cause by holding the airplane and passengers. When the plane safely landed in Somalia, the hijackers made everyone wait during long and scary armed talks. After many days of waiting inside, the hijackers threatened to use explosives to blow up the hostages completely everywhere. Fortunately, the German police planned to rescue them, and this extremely brave and dangerous military rescue mission succeeded perfectly. Most of the terrified passengers were eventually allowed to travel back to their own homes very quickly afterward. However, the German soldiers decided to shoot the dangerous attackers and free everyone during the difficult rescue mission. Finally, those rescued captives were safely brought home, ending this historically important and very famous successful airplane rescue. This amazing event changed history forever. It showed the world how special police forces could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 11,
+        title: "Kolwezi Rescue (Opération Léopard)",
+        location: "Kolwezi, Zaire (DRC)",
+        year: "1978",
+        filename: "Kolwezi Rescue (Opération Léopard / Red Bean) – Kolwezi, Zaire (now DRC) (1978).m4a",
+        script: `In May nineteen seventy-eight, a terrible tragedy happened during a very normal spring day in Kolwezi, Zaire. Suddenly, many members of a dangerous group used weapons to take complete control of a large city. They quickly attacked the places where the workers from Europe were staying and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the innocent workers hostage. When the rebel soldiers arrived at the buildings, the hijackers made everyone wait during long and scary talks. After many hours of waiting inside, the hijackers threatened to use weapons to hurt the scared hostages completely everywhere. Fortunately, the French army planned to rescue them, and this extremely brave and dangerous military rescue mission succeeded perfectly. Most of the terrified workers were eventually allowed to travel back to their own homes very quickly afterward. However, the French soldiers decided to shoot the dangerous attackers during the difficult and very loud gun battle. Finally, those innocent captives were safely returned home, ending this historically important and very famous successful military rescue. This amazing event changed history forever. It showed the world how special military forces could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 12,
+        title: "Grand Mosque Seizure",
+        location: "Mecca, Saudi Arabia",
+        year: "1979",
+        filename: "Grand Mosque Seizure – Mecca, Saudi Arabia (1979).m4a",
+        script: `In November nineteen seventy-nine, a terrible tragedy happened during a very important prayer day in Mecca, Arabia. Suddenly, hundreds of members of a dangerous group used weapons to take complete control of the mosque. They quickly attacked the building where the worshipers from everywhere were staying and took them as prisoners. The attackers wanted to bring global attention to their religious cause by holding the innocent worshipers hostage. When the local soldiers arrived at the building, the attackers made everyone wait during long and scary battles. After many days of waiting inside, the attackers threatened to use weapons to hurt the scared hostages completely everywhere. Fortunately, the Saudi army planned to rescue them, and this extremely brave and dangerous military rescue mission succeeded perfectly. Most of the terrified worshipers were eventually allowed to travel back to their own homes very quickly afterward. However, the Saudi government decided to punish the dangerous attackers as prisoners for several difficult months right there. Finally, those innocent captives were safely returned home, ending this historically important and very famous successful military rescue. This amazing event changed history forever. It showed the world how special military forces could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 13,
+        title: "Operation Argo (The Canadian Caper)",
+        location: "Tehran, Iran",
+        year: "1979–1980",
+        filename: "Operation Argo (The Canadian Caper) – Tehran, Iran (1979–1980).m4a",
+        script: `In November nineteen seventy-nine, a terrible tragedy happened during a very dangerous political revolution in Tehran, Iran. Suddenly, many members of a dangerous group used weapons to take complete control of the American embassy. They quickly attacked the building where the workers from America were staying and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the innocent workers hostage. When the local police refused to help anyone, the hijackers made everyone wait during long and scary talks. After many days of waiting inside, six workers escaped to use a fake movie to fool everyone completely everywhere. Fortunately, the Canadian government planned to rescue them, and this extremely brave and dangerous spy rescue mission succeeded perfectly. All of the terrified workers were eventually allowed to travel back to their own homes very quickly afterward. However, the dangerous attackers decided to hold other American workers as prisoners for several difficult months right there. Finally, those six captives were safely returned home, ending this historically important and very famous successful spy rescue. This amazing event changed history forever. It showed the world how special clever tricks could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 14,
+        title: "Dominican Embassy Siege",
+        location: "Bogotá, Colombia",
+        year: "1980",
+        filename: "Dominican Embassy Siege – Bogotá, Colombia (1980).m4a",
+        script: `In February nineteen eighty, a terrible tragedy happened during a very famous diplomatic party in Bogotá, Colombia. Suddenly, sixteen members of a dangerous group used weapons to take complete control of the large building. They quickly attacked the building where the diplomats from everywhere were staying and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the important diplomats hostage. When the local police arrived at the building, the hijackers made everyone wait during long and scary talks. After many days of waiting inside, the hijackers threatened to use weapons to hurt the scared hostages completely everywhere. Fortunately, the Colombian government planned to talk with them, and this extremely brave diplomatic rescue mission succeeded very perfectly. Most of the terrified diplomats were eventually allowed to travel back to their own homes very quickly afterward. However, the Colombian government decided to let the attackers travel to another country after the difficult negotiations there. Finally, those innocent captives were safely returned home, ending this historically important and very famous successful diplomatic rescue. This amazing event changed history forever. It showed the world how special peaceful talks could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 15,
+        title: "Operation Eagle Claw",
+        location: "Tehran, Iran",
+        year: "1980",
+        filename: "Operation Eagle Claw (Iran Hostage Crisis) – Tehran, Iran (1980).m4a",
+        script: `In April nineteen eighty, a terrible tragedy happened during a very dark spring night in Tehran, Iran. Suddenly, several members of a special group used helicopters to take complete control of a desert area. They quickly planned to reach the building where the workers from America were staying as captive prisoners. The soldiers wanted to bring complete freedom to their captive friends by rescuing the innocent American hostages. When the rescue helicopters arrived at the desert, the soldiers made everyone wait during long and scary sandstorms. After many hours of waiting outside, the soldiers realized they could not use the broken helicopters completely safely everywhere. Unfortunately, the American army tried to fly away, but this extremely frightening and dangerous military rescue mission failed badly. None of the terrified hostages were eventually allowed to travel back to their own homes very quickly afterward. However, the Iranian government decided to hold the American workers as prisoners for several difficult months right there. Finally, those innocent captives were safely returned later, ending this historically important and very famous sad military failure. This frightening event changed history forever. It showed the world how special military forces could be defeated by terrible accidents during political rescues today.`
+      },
+      {
+        id: 16,
+        title: "Operation Nimrod (Iranian Embassy Siege)",
+        location: "London, United Kingdom",
+        year: "1980",
+        filename: "Operation Nimrod (Iranian Embassy Siege) – London, United Kingdom (1980).m4a",
+        script: `In May nineteen eighty, a frightening standoff happened during a very normal spring week in London, England. Suddenly, six members of a dangerous group used weapons to take complete control of the large embassy. They quickly attacked the building where the workers from Iran were staying and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the innocent workers hostage. When the local police arrived at the building, the hijackers made everyone wait during long and scary talks. After many days of waiting inside, the hijackers threatened to use weapons to hurt the scared hostages completely everywhere. Fortunately, the British army planned to rescue them, and this extremely brave and dangerous military rescue mission succeeded perfectly. Most of the terrified workers were eventually allowed to travel back to their own homes very quickly afterward. However, the British soldiers decided to shoot five dangerous attackers during the difficult and very loud gun battle. Finally, those innocent captives were safely returned home, ending this historically important and very famous successful military rescue. This amazing event changed history forever. It showed the world how special military forces could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 17,
+        title: "Achille Lauro Cruise Ship Hijacking",
+        location: "Mediterranean Sea",
+        year: "1985",
+        filename: "Achille Lauro Cruise Ship Hijacking – Mediterranean Sea (1985) .m4a",
+        script: `In October nineteen eighty-five, a terrible tragedy happened during a very relaxing ocean vacation in the Mediterranean. Suddenly, four members of a dangerous group used weapons to take complete control of a large ship. They quickly attacked the boat where the tourists from everywhere were relaxing and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the innocent tourists hostage. When the ship sailed across the dark water, the hijackers made everyone wait during long and scary talks. After many days of waiting inside, the hijackers threatened to use weapons to hurt the scared hostages completely everywhere. Fortunately, the Egyptian government planned to talk with them, and this extremely brave diplomatic rescue mission succeeded very perfectly. Most of the terrified tourists were eventually allowed to travel back to their own homes very quickly afterward. However, the dangerous attackers decided to kill one older passenger from America during the difficult hostage situation there. Finally, those innocent captives were safely returned home, ending this historically important and very famous sad ship hijacking. This frightening event changed history forever. It showed the world how special cruise ships could be used as targets for terrible political attacks today.`
+      },
+      {
+        id: 18,
+        title: "Japanese Embassy Hostage Crisis",
+        location: "Lima, Peru",
+        year: "1996–1997",
+        filename: "Japanese Embassy Hostage Crisis .mp3",
+        script: `In December nineteen ninety-six, a frightening standoff happened during a very busy diplomatic party in Lima, Peru. Suddenly, fourteen members of a dangerous group used weapons to take complete control of the large house. They quickly attacked the building where the diplomats from everywhere were staying and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the important diplomats hostage. When the local police arrived at the building, the hijackers made everyone wait during long and scary talks. After many months of waiting inside, the hijackers threatened to use weapons to hurt the scared hostages completely everywhere. Fortunately, the Peruvian army planned to rescue them, and this extremely brave and dangerous military rescue mission succeeded perfectly. Most of the terrified diplomats were eventually allowed to travel back to their own homes very quickly afterward. However, the Peruvian soldiers decided to shoot the fourteen dangerous attackers during the difficult and very loud gun battle. Finally, those innocent captives were safely returned home, ending this historically important and very famous successful military rescue. This amazing event changed history forever. It showed the world how special military forces could be used as tools for stopping political attacks today.`
+      },
+      {
+        id: 19,
+        title: "Moscow Theater Hostage Crisis",
+        location: "Moscow, Russia",
+        year: "2002",
+        filename: "Moscow Theater Hostage Crisis – Moscow, Russia (2002).m4a",
+        script: `In October two thousand two, a terrible tragedy happened during a very popular evening show in Moscow, Russia. Suddenly, forty members of a dangerous group used weapons to take complete control of the large theater. They quickly attacked the building where the families from everywhere were sitting and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the innocent families hostage. When the local police arrived at the building, the hijackers made everyone wait during long and scary talks. After many days of waiting inside, the hijackers threatened to use explosives to hurt the scared hostages completely everywhere. Unfortunately, the Russian army tried to rescue them, but this extremely frightening and dangerous military rescue mission failed badly. Many of the terrified families were sadly never able to travel back to their own loving homes again. However, the Russian soldiers decided to shoot the forty dangerous attackers during the difficult and very loud gun battle. Finally, the surviving captives were safely taken outside, ending this historically important and very famous sad theater tragedy. This frightening event changed history forever. It showed the world how innocent theaters could be used as targets for terrible political attacks today.`
+      },
+      {
+        id: 20,
+        title: "Beslan School Siege",
+        location: "North Ossetia, Russia",
+        year: "2004",
+        filename: "Beslan School Siege – North Ossetia, Russia (2004).m4a",
+        script: `In September two thousand four, a terrible tragedy happened during a very happy school day in Russia. Suddenly, many members of a dangerous group used weapons to take complete control of the large school. They quickly attacked the building where the children from town were learning and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the innocent children hostage. When the local police arrived at the building, the hijackers made everyone wait during long and scary talks. After many days of waiting inside, the hijackers threatened to use explosives to hurt the young children completely everywhere. Unfortunately, the Russian army tried to rescue them, but this extremely frightening and dangerous military rescue mission failed badly. Many of the terrified children were sadly never able to travel back to their own loving homes again. However, the Russian soldiers decided to shoot the dangerous attackers during the difficult and very loud gun battle. Finally, the surviving captives were safely taken outside, ending this historically important and very famous sad school tragedy. This frightening event changed history forever. It showed the world how innocent schools could be used as targets for terrible political attacks even today.`
+      },
+      {
+        id: 21,
+        title: "The Mumbai Attacks (Taj Hotel)",
+        location: "Mumbai, India",
+        year: "2008",
+        filename: "The Mumbai Attacks (Taj Hotel Siege) – Mumbai, India (2008).m4a",
+        script: `In November two thousand eight, a terrible tragedy happened during a very busy night in Mumbai, India. Suddenly, ten members of a dangerous group used weapons to take complete control of the large hotel. They quickly attacked the building where the guests from everywhere were staying and took them as prisoners. The attackers wanted to bring global attention to their political cause by holding the innocent guests hostage. When the local police arrived at the building, the attackers made everyone wait during long and scary battles. After many days of waiting inside, the attackers threatened to use weapons to hurt the scared guests completely everywhere. Fortunately, the Indian army planned to rescue them, and this extremely brave and dangerous military rescue mission succeeded perfectly. Many of the terrified guests were eventually allowed to travel back to their own homes very quickly afterward. However, the dangerous attackers decided to kill many innocent people during the difficult and very loud gun battle. Finally, those innocent captives were safely returned home, ending this historically important and very famous sad hotel tragedy. This frightening event changed history forever. It showed the world how special city hotels could be used as targets for terrible political attacks today.`
+      }
+    ];
+
+    // State Variables
+    let activeTrackIndex = -1;
+    let isPlaying = false;
+    let filteredDatabase = [...database];
+
+    // DOM Elements
+    const audio = document.getElementById('audioEngine');
+    const trackListContainer = document.getElementById('trackListContainer');
+    const masterPlayBtn = document.getElementById('masterPlayBtn');
+    const playIconSvg = document.getElementById('playIconSvg');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const timeline = document.getElementById('timeline');
+    const currTimeDisplay = document.getElementById('currTime');
+    const totalDurationDisplay = document.getElementById('totalDuration');
+    const volSlider = document.getElementById('volSlider');
+    const barTrackTitle = document.getElementById('barTrackTitle');
+    const barTrackLocation = document.getElementById('barTrackLocation');
+    const appContainer = document.getElementById('appContainer');
+    const lyricsToggleBtn = document.getElementById('lyricsToggleBtn');
+    const closeScriptBtn = document.getElementById('closeScriptBtn');
+    const scriptTitle = document.getElementById('scriptTitle');
+    const scriptBody = document.getElementById('scriptBody');
+    const scriptText = document.getElementById('scriptText');
+    const searchInput = document.getElementById('searchInput');
+
+    // SVGs for state changes
+    const PLAY_SVG = '<polygon points="6,4 20,12 6,20"/>';
+    const PAUSE_SVG = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+
+    // Format Seconds to MM:SS
+    function formatTime(seconds) {
+      if (isNaN(seconds)) return "0:00";
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    // Render Tracklist Rows
+    function renderList(list) {
+      trackListContainer.innerHTML = '';
+      if (list.length === 0) {
+        trackListContainer.innerHTML = `<div style="padding: 24px; color: var(--text-sub); text-align: center;">No matching crises found.</div>`;
+        return;
+      }
+
+      list.forEach((track) => {
+        const item = document.createElement('div');
+        const isActive = activeTrackIndex !== -1 && database[activeTrackIndex].id === track.id;
+        item.className = `track-item ${isActive ? 'active' : ''}`;
+        item.id = `track-${track.id}`;
+
+        item.innerHTML = `
+          <div class="track-num">${track.id}</div>
+          <div class="track-title-wrap">
+            <span class="track-title">${track.title}</span>
+            <span class="track-location">${track.location}</span>
+          </div>
+          <div class="track-year">${track.year}</div>
+          <div class="track-actions">
+            <button class="btn-read-script" data-id="${track.id}">Script</button>
+          </div>
+        `;
+
+        // Click row to play
+        item.addEventListener('click', (e) => {
+          if (e.target.classList.contains('btn-read-script')) return;
+          const origIndex = database.findIndex(t => t.id === track.id);
+          selectTrack(origIndex, true);
+        });
+
+        // Click script button to view script and open sidebar
+        const scriptBtn = item.querySelector('.btn-read-script');
+        scriptBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const origIndex = database.findIndex(t => t.id === track.id);
+          displayScript(origIndex);
+          openLyricsPanel();
+        });
+
+        trackListContainer.appendChild(item);
+      });
+    }
+
+    // Select and load a track
+    function selectTrack(index, autoPlay = true) {
+      if (index < 0 || index >= database.length) return;
+      activeTrackIndex = index;
+      const track = database[index];
+
+      // Safe URL encoding for audio filename
+      audio.src = encodeURIComponent(track.filename);
+      barTrackTitle.textContent = track.title;
+      barTrackLocation.textContent = `${track.location} • ${track.year}`;
+
+      displayScript(index);
+
+      // Highlight active in UI
+      document.querySelectorAll('.track-item').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById(`track-${track.id}`);
+      if (activeEl) activeEl.classList.add('active');
+
+      if (autoPlay) {
+        audio.play().then(() => {
+          isPlaying = true;
+          playIconSvg.innerHTML = PAUSE_SVG;
+        }).catch(err => {
+          console.warn("Playback prevented or media file missing:", err);
+          isPlaying = false;
+          playIconSvg.innerHTML = PLAY_SVG;
+        });
+      }
+    }
+
+    // Display transcript text in the side panel
+    function displayScript(index) {
+      if (index < 0 || index >= database.length) return;
+      const track = database[index];
+      scriptTitle.textContent = `${track.title} (${track.year})`;
+      scriptText.textContent = track.script;
+      scriptBody.scrollTop = 0;
+    }
+
+    // Toggle Play/Pause
+    function togglePlayback() {
+      if (activeTrackIndex === -1) {
+        selectTrack(0, true);
+        return;
+      }
+
+      if (audio.paused) {
+        audio.play();
+        isPlaying = true;
+        playIconSvg.innerHTML = PAUSE_SVG;
+      } else {
+        audio.pause();
+        isPlaying = false;
+        playIconSvg.innerHTML = PLAY_SVG;
+      }
+    }
+
+    // Audio element event bindings
+    audio.addEventListener('timeupdate', () => {
+      if (!isNaN(audio.duration)) {
+        timeline.value = (audio.currentTime / audio.duration) * 100;
+        currTimeDisplay.textContent = formatTime(audio.currentTime);
+        totalDurationDisplay.textContent = formatTime(audio.duration);
+      }
+    });
+
+    audio.addEventListener('loadedmetadata', () => {
+      totalDurationDisplay.textContent = formatTime(audio.duration);
+    });
+
+    audio.addEventListener('ended', () => {
+      playNext();
+    });
+
+    // Timeline Scrubbing
+    timeline.addEventListener('input', () => {
+      if (!isNaN(audio.duration)) {
+        audio.currentTime = (timeline.value / 100) * audio.duration;
+      }
+    });
+
+    // Volume Adjustment
+    volSlider.addEventListener('input', () => {
+      audio.volume = volSlider.value / 100;
+    });
+
+    // Control actions
+    masterPlayBtn.addEventListener('click', togglePlayback);
+
+    function playPrev() {
+      if (activeTrackIndex > 0) {
+        selectTrack(activeTrackIndex - 1, true);
+      } else {
+        selectTrack(database.length - 1, true);
+      }
+    }
+
+    function playNext() {
+      if (activeTrackIndex < database.length - 1) {
+        selectTrack(activeTrackIndex + 1, true);
+      } else {
+        selectTrack(0, true);
+      }
+    }
+
+    prevBtn.addEventListener('click', playPrev);
+    nextBtn.addEventListener('click', playNext);
+
+    // Panel Toggling logic
+    function openLyricsPanel() {
+      appContainer.classList.remove('lyrics-collapsed');
+      lyricsToggleBtn.classList.add('active-tab');
+    }
+
+    function closeLyricsPanel() {
+      appContainer.classList.add('lyrics-collapsed');
+      lyricsToggleBtn.classList.remove('active-tab');
+    }
+
+    function toggleLyrics() {
+      if (appContainer.classList.contains('lyrics-collapsed')) {
+        openLyricsPanel();
+      } else {
+        closeLyricsPanel();
+      }
+    }
+
+    lyricsToggleBtn.addEventListener('click', toggleLyrics);
+    closeScriptBtn.addEventListener('click', closeLyricsPanel);
+
+    // Dynamic Filter / Search
+    searchInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      filteredDatabase = database.filter(item => 
+        item.title.toLowerCase().includes(q) ||
+        item.location.toLowerCase().includes(q) ||
+        item.year.includes(q) ||
+        item.script.toLowerCase().includes(q)
+      );
+      renderList(filteredDatabase);
+    });
+
+    // Spacebar to play/pause when not typing in the search box
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target !== searchInput) {
+        e.preventDefault();
+        togglePlayback();
+      }
+    });
+
+    // Initial render
+    renderList(database);
+  </script>
+</body>
+</html>
